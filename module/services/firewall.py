@@ -40,10 +40,8 @@ class SQLFirewallRuleManager:
             method="GET",
             headers=self.headers,
             retry_callback=self.list_sql_servers,
-            create_role_assignment=self.subscription_manager.create_role_assignment,
-            subscription_id=self.subscription['subscriptionId'],
-            role_definition_id=self.subscription['roleDefinitionId'],
-            principal_id=self.subscription['principalId']
+            create_role_assignment= self.subscription_manager.create_role_assignment,
+            subscription = self.subscription
         )
 
         if isinstance(response, dict):

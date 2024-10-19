@@ -31,9 +31,9 @@ def make_api_request(
         elif method == "PUT":
             response = requests.put(url, headers=headers, json=json_data)
         else:
-            raise ValueError("Invalid HTTP method. Only 'GET', 'POST', and 'PUT' are supported.")
+            raise ValueError("Invalid HTTP method. Only 'GET', 'POST' and 'PUT' are supported.")
 
-        if response.status_code == 200:
+        if response.status_code in (200, 201):
             return response.json()
 
         elif response.status_code == 403:
@@ -42,11 +42,11 @@ def make_api_request(
                 print(f"Authorisation failed: {error_data.get('message')}")
                 
                 if subscription and create_role_assignment:
-                    print("Attempting to create role assignment for proper authorisation...")
+                    print("Creating a new role assignment to grant necessary permissions...")
                     create_role_assignment(subscription['subscriptionId'], subscription['roleDefinitionId'], subscription['principalId'])
-                
+
                 if retry_callback:
-                    print("Attempting to retry the operation after handling authorisation...")
+                    print("Retrying the operation after successful role assignment...")
                     return retry_callback()
             else:
                 print(f"Failed request. Status Code: {response.status_code}")
