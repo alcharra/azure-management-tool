@@ -5,7 +5,7 @@ from typing import List, Dict, Optional, Any
 
 # IMPORT UTILITY FUNCTIONS
 # ///////////////////////////////////////////////////////////////
-from module.utils import *
+from modules.utils import *
 
 # SUBSCRIPTION MANAGER CLASS
 # ///////////////////////////////////////////////////////////////

@@ -163,6 +163,3 @@ cython_debug/
 
 # Results 
 results/
-
-# Configuration
-config.json

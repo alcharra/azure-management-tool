@@ -1,6 +1,6 @@
 # IMPORT MODULES
 # ///////////////////////////////////////////////////////////////
-from module import *
+from modules import *
 
 # MAIN FUNCTION
 # ///////////////////////////////////////////////////////////////
@@ -24,10 +24,10 @@ def main():
         action = input("Enter the number of your choice: ").strip()
 
         if action == "1":
-            settings_manager = AppSettingsManager(selected_subscription, token, subscription_manager)
+            settings_manager = AppSettingsManager(selected_subscription, token, subscription_manager, config_manager)
             settings_manager.fetch_and_save()
         elif action == "2":
-            sql_manager = SQLFirewallRuleManager(selected_subscription, token, user_name, subscription_manager)
+            sql_manager = SQLFirewallRuleManager(selected_subscription, token, user_name, subscription_manager, config_manager)
             sql_manager.create_or_update_firewall_rule()
         else:
             print("Invalid option. Please enter a valid number.")

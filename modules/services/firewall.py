@@ -4,7 +4,7 @@ from typing import Optional, Tuple, List, Dict, Any
 
 # IMPORT UTILITY FUNCTIONS
 # ///////////////////////////////////////////////////////////////
-from module.utils import *
+from modules.utils import *
 
 # SQL FIREWALL RULE MANAGER CLASS
 # ///////////////////////////////////////////////////////////////
@@ -12,8 +12,9 @@ class SQLFirewallRuleManager:
 
     # INITIALISE FIREWALL RULE MANAGER
     # ///////////////////////////////////////////////////////////////
-    def __init__(self, subscription: Dict[str, str], token: str, firewall_name: str, subscription_manager: Any) -> None:
+    def __init__(self, subscription: Dict[str, str], token: str, firewall_name: str, subscription_manager: Any, config_manager: Any) -> None:
         self.subscription_manager: Any = subscription_manager
+        self.config_manager: Any = config_manager
         self.subscription: Dict[str, str] = subscription
         self.base_url: str = "https://management.azure.com"
         self.api_version: str = "2021-11-01"
@@ -22,7 +23,6 @@ class SQLFirewallRuleManager:
             "Content-Type": "application/json"
         }
         self.firewall_name: str = firewall_name
-        self.server_name: Optional[str] = None
         self.ip_address: Optional[str] = None
         self.list_sql_servers: Optional[List[Dict[str, Any]]] = self.list_sql_servers()
 
@@ -61,70 +61,6 @@ class SQLFirewallRuleManager:
 
         return sql_servers
 
-    # SELECT SQL SERVER
-    # Allows user to select a SQL server via search or list selection
-    # ///////////////////////////////////////////////////////////////
-    def select_sql_server(self) -> Optional[Tuple[str, str]]:
-        if not self.list_sql_servers:
-            print("No SQL servers found in the subscription.")
-            return None
-
-        print("\nWould you like to:")
-        print("1. Search for a SQL server by name")
-        print("2. Pick from a list of SQL servers")
-        user_choice = input("Enter 1 to search or 2 to pick from list: ").strip()
-
-        if user_choice == "1":
-            search_term = input("Enter the name (or part of the name) of the SQL server: ").lower()
-            matching_servers: List[Dict[str, Any]] = [server for server in self.list_sql_servers if search_term in server['name'].lower()]
-
-            while len(matching_servers) > 1:
-                print(f"\nFound {len(matching_servers)} matching SQL servers.")
-                for i, server in enumerate(matching_servers, start=1):
-                    print(f"{i}. {server['name']}")
-
-                refine_choice = input("\nEnter more characters to refine search or the number of your choice: ").strip()
-
-                if refine_choice.isdigit():
-                    selected_index = int(refine_choice) - 1
-                    if 0 <= selected_index < len(matching_servers):
-                        selected_server = matching_servers[selected_index]
-                        self.server_name = selected_server['name']
-                        resource_group = extract_segment(selected_server['id'], 4)
-                        return selected_server['name'], resource_group
-                    else:
-                        print("Invalid selection. Please enter a valid number.")
-                else:
-                    search_term = refine_choice.lower()
-                    matching_servers = [server for server in self.list_sql_servers if search_term in server['name'].lower()]
-
-            if len(matching_servers) == 1:
-                selected_server = matching_servers[0]
-                self.server_name = selected_server['name']
-                resource_group = extract_segment(selected_server['id'], 4)
-                return selected_server['name'], resource_group
-            else:
-                print("No matching SQL servers found.")
-                return None
-
-        elif user_choice == "2":
-            print("\nPlease select a SQL server from the list:")
-            for i, server in enumerate(self.list_sql_servers, start=1):
-                print(f"{i}. {server['name']}")
-            selected_index: int = int(input("Enter the number of your choice: ")) - 1
-            if 0 <= selected_index < len(self.list_sql_servers):
-                selected_server = self.list_sql_servers[selected_index]
-                self.server_name = selected_server['name']
-                resource_group = extract_segment(selected_server['id'], 4)
-                return selected_server['name'], resource_group
-            else:
-                print("Invalid selection.")
-                return None, None
-
-        else:
-            print("Invalid choice. Please enter 1 or 2.")
-            return None
-
     # FETCH PUBLIC IP ADDRESS
     # Retrieves the public IPv4 address
     # ///////////////////////////////////////////////////////////////
@@ -148,11 +84,19 @@ class SQLFirewallRuleManager:
     # API Reference: https://learn.microsoft.com/en-us/rest/api/sql/firewall-rules/create-or-update?view=rest-sql-2021-11-01
     # ///////////////////////////////////////////////////////////////
     def create_or_update_firewall_rule(self) -> Optional[Dict[str, Any]]:
-        if not self.server_name:
-            selected_server, selected_resource_group = self.select_sql_server()
-            if not selected_server:
-                print("No SQL server selected. Aborting operation.")
-                return None
+        selected_server, selected_resource_group = search_and_select_from_list(
+            items = self.list_sql_servers,
+            item_key = 'name',
+            item_type=  'SQL Server',
+            select_message = "\nPlease select a SQL server from the list:",
+            extract_func = lambda server: extract_segment(server['id'], 4),
+            num_columns = self.config_manager.configurations['display_options']['number_of_columns'],
+            display_columns = self.config_manager.configurations['display_options']['display_items_in_columns']
+        )
+
+        if not selected_server or not selected_resource_group:
+            print("No SQL server selected. Aborting operation.")
+            return None
 
         firewall_rule_name = self.prompt_firewall_rule_name()
         print(f"Adding IP to firewall rule: {firewall_rule_name}")
@@ -179,7 +123,7 @@ class SQLFirewallRuleManager:
         url = (
             f"{self.base_url}/subscriptions/{self.subscription['subscriptionId']}/"
             f"resourceGroups/{selected_resource_group}/"
-            f"providers/Microsoft.Sql/servers/{self.server_name}/"
+            f"providers/Microsoft.Sql/servers/{selected_server}/"
             f"firewallRules/{firewall_rule_name}?api-version={self.api_version}"
         )
         

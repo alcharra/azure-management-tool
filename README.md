@@ -31,15 +31,22 @@ The tool expects a `config.json` file structured like this:
 
 ```json
 {
+    "version": "vX.X.X",
     "app_name": "Azure Management Tool",
-    "version" : "vX.X.X"
+    "display_options": {
+        "display_items_in_columns": true,
+        "number_of_columns": 2
+    }
 }
 ```
 
 ### Explanation:
 
-- The `config.json` file includes metadata about the application, such as the `app_name` and the current `version`.
-- The tool automatically reads this file to display version information and provide a better user experience.
+- **version**: The version of the tool that is shown to users when the tool runs.
+- **app_name**: The name of the application, which is used for display purposes.
+- **display_options**:
+  - **display_items_in_columns**: A boolean value (`true` or `false`) that controls whether to display items (like web apps or SQL servers) in multiple columns for better readability.
+  - **number_of_columns**: Specifies how many columns to display when `display_items_in_columns` is set to `true`.
 
 ## Usage
 
@@ -86,25 +93,20 @@ When using the tool to add or update SQL Firewall rules:
 - If you'd like to add a firewall rule for someone else, you can simply provide their name and IP address. The tool will also calculate the correct IP range for the provided IP.
 
 ### SQL Server Fetching
-- The tool will fetch all SQL servers within the subscription. You will be prompted to either **search** for a SQL server by name or **select** one from a list.
+- The tool will fetch all SQL servers within the subscription. You will be presented with a list of SQL servers or can refine the search by entering part of the server name.
 
 ### Example 1: Adding Your Own IP
 
 When adding your own IP:
 
 ```bash
-Would you like to:
-1. Search for a SQL server by name
-2. Pick from a list of SQL servers
-Enter 1 to search or 2 to pick from list: 2
-
 Please select a SQL server:
-1. sql-server-1
-2. sql-server-2
-Enter the number of your choice: 1
+1. sql-server-1  
+2. sql-server-2  
+Enter the number of your choice: 1  
 
-Adding IP to firewall rule: MyFirewallRule
-IP Range: 192.168.1.0 - 192.168.1.255
+Adding IP to firewall rule: MyFirewallRule  
+IP Range: 192.168.1.0 - 192.168.1.255  
 Firewall rule 'MyFirewallRule' created/updated successfully.
 ```
 
@@ -113,23 +115,16 @@ Firewall rule 'MyFirewallRule' created/updated successfully.
 When adding for someone else:
 
 ```bash
-Would you like to:
-1. Search for a SQL server by name
-2. Pick from a list of SQL servers
-Enter 1 to search or 2 to pick from list: 1
+Please select a SQL server:
+1. sql-test  
+2. sql-prod  
+Enter the number of your choice: 1  
 
-Enter the name (or part of the name) of the SQL server: sql
+Enter the custom name: JohnDoe  
+Enter the IP address: 10.0.0.25  
 
-Found 2 matching SQL servers:
-1. sql-test
-2. sql-prod
-Enter more characters to refine search or the number of your choice: 1
-
-Enter the custom name: JohnDoe
-Enter the IP address: 10.0.0.25
-
-Adding IP to firewall rule: JohnDoeFirewallRule
-IP Range: 10.0.0.0 - 10.0.0.255
+Adding IP to firewall rule: JohnDoeFirewallRule  
+IP Range: 10.0.0.0 - 10.0.0.255  
 Firewall rule 'JohnDoeFirewallRule' created/updated successfully.
 ```
 
@@ -141,9 +136,7 @@ When using the tool to fetch and store AppSettings:
 - The tool will connect to your Azure subscription and retrieve a list of available web apps.
 
 ### Select the Web App
-- You will be prompted to either **search** for a web app by name or **select** one from a list. This offers flexibility in locating your desired app:
-  - **Option 1: Search** - Enter part of the app name to filter results.
-  - **Option 2: Select from List** - Directly pick a web app from the full list provided.
+- You will be presented with a list of web apps or can refine the search by entering part of the app name.
 
 ### Fetches AppSettings and Connection Strings
 - Once a web app is selected, the tool will automatically fetch both the **app settings** and **connection strings** for that web app from Azure.
@@ -156,18 +149,13 @@ When using the tool to fetch and store AppSettings:
 When fetching AppSettings:
 
 ```bash
-Would you like to:
-1. Search for a web app by name
-2. Pick from a list of web apps
-Enter 1 to search or 2 to pick from list: 2
-
 Please select a web app:
-1. webapp1
-2. webapp2
-Enter the number of your choice: 1
+1. webapp1  
+2. webapp2  
+Enter the number of your choice: 1  
 
-Fetching app settings for webapp1...
-Fetching connection strings for webapp1...
+Fetching app settings for webapp1...  
+Fetching connection strings for webapp1...  
 Appsettings successfully saved to results/webapp1_appsettings.json
 ```
 
@@ -176,19 +164,14 @@ Appsettings successfully saved to results/webapp1_appsettings.json
 When searching for a web app:
 
 ```bash
-Would you like to:
-1. Search for a web app by name
-2. Pick from a list of web apps
-Enter 1 to search or 2 to pick from list: 1
-
 Enter the name (or part of the name) of the web app: api
 
 Found 2 matching web apps:
-1. api-test
-2. api-prod
-Enter more characters to refine search or the number of your choice: 1
+1. api-test  
+2. api-prod  
+Enter more characters to refine search or the number of your choice: 1  
 
-Fetching app settings for api-test...
-Fetching connection strings for api-test...
+Fetching app settings for api-test...  
+Fetching connection strings for api-test...  
 Appsettings successfully saved to results/api-test_appsettings.json
 ```

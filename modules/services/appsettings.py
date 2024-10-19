@@ -5,7 +5,7 @@ from typing import List, Dict, Any, Optional
 
 # IMPORT UTILITY FUNCTIONS
 # ///////////////////////////////////////////////////////////////
-from module.utils import *
+from modules.utils import *
 
 # APP SETTINGS MANAGER CLASS
 # ///////////////////////////////////////////////////////////////
@@ -13,8 +13,9 @@ class AppSettingsManager:
     
     # INITIALISE APP SETTINGS MANAGER
     # ///////////////////////////////////////////////////////////////
-    def __init__(self, subscription: Dict[str, str], token: str, subscription_manager: Any) -> None:
+    def __init__(self, subscription: Dict[str, str], token: str, subscription_manager: Any, config_manager: Any) -> None:
         self.subscription_manager: Any = subscription_manager
+        self.config_manager: Any = config_manager
         self.subscription: Dict[str, str] = subscription
         self.base_url: str = "https://management.azure.com"
         self.api_version: str = "2023-12-01"
@@ -60,77 +61,24 @@ class AppSettingsManager:
 
         return web_apps
 
-
-    # SELECT A WEB APP
-    # Allows the user to search for or pick a web app from a list
-    # ///////////////////////////////////////////////////////////////
-    def select_web_apps(self) -> Optional[tuple[str, str]]:
-        if not self.list_web_apps:
-            print("No web apps found.")
-            return None
-
-        print("\nWould you like to:")
-        print("1. Search for a web app by name")
-        print("2. Pick from a list of web apps")
-        user_choice = input("Enter 1 to search or 2 to pick from list: ").strip()
-
-        if user_choice == "1":
-            search_term = input("Enter the name (or part of the name) of the web app: ").lower()
-            matching_web_apps: List[Dict[str, Any]] = [app for app in self.list_web_apps if search_term in app['name'].lower()]
-
-            while len(matching_web_apps) > 1:
-                print(f"\nFound {len(matching_web_apps)} matching web apps.")
-                for i, app in enumerate(matching_web_apps, start=1):
-                    print(f"{i}. {app['name']}")
-
-                refine_choice = input("\nEnter more characters to refine search or the number of your choice: ").strip()
-
-                if refine_choice.isdigit():
-                    selected_option = int(refine_choice) - 1
-                    if 0 <= selected_option < len(matching_web_apps):
-                        selected_app = matching_web_apps[selected_option]
-                        return selected_app['name'], selected_app['resourceGroup']
-                    else:
-                        print("Invalid selection. Please enter a valid number.")
-                else:
-                    search_term = refine_choice.lower()
-                    matching_web_apps = [app for app in self.list_web_apps if search_term in app['name'].lower()]
-
-            if len(matching_web_apps) == 1:
-                selected_app = matching_web_apps[0]
-                return selected_app['name'], selected_app['resourceGroup']
-            else:
-                print("No matching web apps found.")
-                return None
-
-        elif user_choice == "2":
-            sorted_web_apps: List[Dict[str, Any]] = sorted(self.list_web_apps, key=lambda x: x['name'])
-            print("\nPlease select a web app from the list:")
-            for i, app in enumerate(sorted_web_apps, start=1):
-                print(f"{i}. {app['name']}")
-            selected_option: int = int(input("Enter the number of your choice: ")) - 1
-            selected_app: Dict[str, Any] = sorted_web_apps[selected_option]
-            selected_resource_group: str = selected_app['resourceGroup']
-            return selected_app['name'], selected_resource_group
-        
-        else:
-            print("Invalid choice. Please enter 1 or 2.")
-            return None
-
     # FETCH APP SETTINGS AND SAVE TO FILE
     # Fetches app settings and connection strings for the selected web app
     # API Reference: https://learn.microsoft.com/en-us/rest/api/appservice/web-apps/list-application-settings?view=rest-appservice-2023-12-01
     # ///////////////////////////////////////////////////////////////
     def fetch_and_save(self) -> None:
-        selected_webapp: Optional[str]
-        selected_resourceGroup: Optional[str]
-        result = self.select_web_apps()
+        selected_webapp, selected_resourceGroup = search_and_select_from_list(
+            items = self.list_web_apps,
+            item_key = 'name',
+            item_type = 'Web App',
+            select_message = "\nPlease select a web app from the list:",
+            extract_func = lambda app: extract_segment(app['id'], 4),
+            num_columns = self.config_manager.configurations['display_options']['number_of_columns'],
+            display_columns = self.config_manager.configurations['display_options']['display_items_in_columns']
+        )
 
-        if not result:
+        if not selected_webapp or not selected_resourceGroup:
             print("No web app selected. Aborting.")
             return
-
-        selected_webapp, selected_resourceGroup = result
 
         settings_url: str = (
             f"{self.base_url}/subscriptions/{self.subscription['subscriptionId']}/"
