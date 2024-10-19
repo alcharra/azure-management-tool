@@ -1,31 +1,185 @@
-import requests
-import json
-import os
+# IMPORT STANDARD LIBRARY MODULES
+# ///////////////////////////////////////////////////////////////
 from collections import defaultdict
+from typing import List, Dict, Any, Optional
 
+# IMPORT UTILITY FUNCTIONS
+# ///////////////////////////////////////////////////////////////
+from module.utils import *
+
+# APP SETTINGS MANAGER CLASS
+# ///////////////////////////////////////////////////////////////
 class AppSettingsManager:
     
-    def __init__(self, subscription_id, token, resource_groups):
-        self.subscription_id = subscription_id
-        self.resource_groups = [rg.lower() for rg in resource_groups]
-        self.base_url = "https://management.azure.com"
-        self.api_version = "2023-12-01"
-        self.headers = {
+    # INITIALISE APP SETTINGS MANAGER
+    # ///////////////////////////////////////////////////////////////
+    def __init__(self, subscription: Dict[str, str], token: str, subscription_manager: Any) -> None:
+        self.subscription_manager: Any = subscription_manager
+        self.subscription: Dict[str, str] = subscription
+        self.base_url: str = "https://management.azure.com"
+        self.api_version: str = "2023-12-01"
+        self.headers: Dict[str, str] = {
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json"
         }
+        self.list_web_apps: Optional[List[Dict[str, Any]]] = self.list_web_apps()
 
-    def request(self, url):
-        response = requests.post(url, headers=self.headers, json={})
-        if response.status_code == 200:
-            return response.json()
+    # LIST ALL WEB APPS
+    # Lists all web apps for the current subscription
+    # API Reference: https://learn.microsoft.com/en-us/rest/api/appservice/web-apps/list?view=rest-appservice-2023-12-01
+    # ///////////////////////////////////////////////////////////////
+    def list_web_apps(self) -> Optional[List[Dict[str, Any]]]:
+        url: str = (
+            f"{self.base_url}/subscriptions/{self.subscription['subscriptionId']}/"
+            f"providers/Microsoft.Web/sites?api-version={self.api_version}"
+        )
+
+        response: Optional[Dict[str, Any]] =  make_api_request(
+            url=url,
+            method="GET",
+            headers=self.headers,
+            retry_callback=self.list_web_apps,
+            create_role_assignment= self.subscription_manager.create_role_assignment,
+            subscription = self.subscription
+        )
+
+        if isinstance(response, dict):
+            web_apps: List[Dict[str, Any]] = response.get("value", [])
+        elif isinstance(response, list):
+            web_apps: List[Dict[str, Any]] = response
         else:
-            print(f"Failed to fetch data. Status: {response.status_code}")
-            print(f"Response: {response.text}")
-            return {}
+            print("Unexpected response format. Returning an empty list.")
+            return []
+
+        if not web_apps:
+            print("No web apps found in the subscription.")
+            return []
+
+        for app in web_apps:
+            app['resourceGroup'] = extract_segment(app['id'], 4).lower()
+
+        return web_apps
+
+
+    # SELECT A WEB APP
+    # Allows the user to search for or pick a web app from a list
+    # ///////////////////////////////////////////////////////////////
+    def select_web_apps(self) -> Optional[tuple[str, str]]:
+        if not self.list_web_apps:
+            print("No web apps found.")
+            return None
+
+        print("\nWould you like to:")
+        print("1. Search for a web app by name")
+        print("2. Pick from a list of web apps")
+        user_choice = input("Enter 1 to search or 2 to pick from list: ").strip()
+
+        if user_choice == "1":
+            search_term = input("Enter the name (or part of the name) of the web app: ").lower()
+            matching_web_apps: List[Dict[str, Any]] = [app for app in self.list_web_apps if search_term in app['name'].lower()]
+
+            while len(matching_web_apps) > 1:
+                print(f"\nFound {len(matching_web_apps)} matching web apps.")
+                for i, app in enumerate(matching_web_apps, start=1):
+                    print(f"{i}. {app['name']}")
+
+                refine_choice = input("\nEnter more characters to refine search or the number of your choice: ").strip()
+
+                if refine_choice.isdigit():
+                    selected_option = int(refine_choice) - 1
+                    if 0 <= selected_option < len(matching_web_apps):
+                        selected_app = matching_web_apps[selected_option]
+                        return selected_app['name'], selected_app['resourceGroup']
+                    else:
+                        print("Invalid selection. Please enter a valid number.")
+                else:
+                    search_term = refine_choice.lower()
+                    matching_web_apps = [app for app in self.list_web_apps if search_term in app['name'].lower()]
+
+            if len(matching_web_apps) == 1:
+                selected_app = matching_web_apps[0]
+                return selected_app['name'], selected_app['resourceGroup']
+            else:
+                print("No matching web apps found.")
+                return None
+
+        elif user_choice == "2":
+            sorted_web_apps: List[Dict[str, Any]] = sorted(self.list_web_apps, key=lambda x: x['name'])
+            print("\nPlease select a web app from the list:")
+            for i, app in enumerate(sorted_web_apps, start=1):
+                print(f"{i}. {app['name']}")
+            selected_option: int = int(input("Enter the number of your choice: ")) - 1
+            selected_app: Dict[str, Any] = sorted_web_apps[selected_option]
+            selected_resource_group: str = selected_app['resourceGroup']
+            return selected_app['name'], selected_resource_group
         
-    def nest_dict(self, flat_dict):
-        nested = defaultdict(dict)
+        else:
+            print("Invalid choice. Please enter 1 or 2.")
+            return None
+
+    # FETCH APP SETTINGS AND SAVE TO FILE
+    # Fetches app settings and connection strings for the selected web app
+    # API Reference: https://learn.microsoft.com/en-us/rest/api/appservice/web-apps/list-application-settings?view=rest-appservice-2023-12-01
+    # ///////////////////////////////////////////////////////////////
+    def fetch_and_save(self) -> None:
+        selected_webapp: Optional[str]
+        selected_resourceGroup: Optional[str]
+        result = self.select_web_apps()
+
+        if not result:
+            print("No web app selected. Aborting.")
+            return
+
+        selected_webapp, selected_resourceGroup = result
+
+        settings_url: str = (
+            f"{self.base_url}/subscriptions/{self.subscription['subscriptionId']}/"
+            f"resourceGroups/{selected_resourceGroup}/"
+            f"providers/Microsoft.Web/sites/{selected_webapp}/config/appsettings/list"
+            f"?api-version={self.api_version}"
+        )
+        conn_strings_url: str = (
+            f"{self.base_url}/subscriptions/{self.subscription['subscriptionId']}/"
+            f"resourceGroups/{selected_resourceGroup}/"
+            f"providers/Microsoft.Web/sites/{selected_webapp}/config/connectionstrings/list"
+            f"?api-version={self.api_version}"
+        )
+
+        appsettings_response: Dict[str, Any] = make_api_request(
+            url=settings_url,
+            method="POST",
+            headers=self.headers,
+            json_data={},
+            retry_callback=self.fetch_and_save,
+            create_role_assignment= self.subscription_manager.create_role_assignment,
+            subscription = self.subscription
+        )
+        conn_strings_response: Dict[str, Any] = make_api_request(
+            url=conn_strings_url,
+            method="POST",
+            headers=self.headers,
+            json_data={},
+            retry_callback=self.fetch_and_save,
+            create_role_assignment= self.subscription_manager.create_role_assignment,
+            subscription = self.subscription
+        )
+
+        appsettings: Dict[str, Any] = self.nest_dict(appsettings_response.get("properties", {}))
+        conn_strings: Dict[str, str] = {key: value['value'] for key, value in conn_strings_response.get("properties", {}).items()}
+
+        combined: Dict[str, Any] = appsettings
+        combined['ConnectionStrings'] = conn_strings
+
+        save_to_json(combined, f"results/{selected_webapp}_appsettings.json")
+
+    # UTILITY FUNCTIONS
+    # ///////////////////////////////////////////////////////////////
+
+    # NEST DICTIONARY DATA
+    # Converts a flat dictionary to a nested dictionary
+    # ///////////////////////////////////////////////////////////////
+    def nest_dict(self, flat_dict: Dict[str, str]) -> Dict[str, Any]:
+        nested: Dict[str, Any] = defaultdict(dict)
         for key, value in flat_dict.items():
             parts = key.split("__")
             current = nested
@@ -33,87 +187,3 @@ class AppSettingsManager:
                 current = current.setdefault(part, {})
             current[parts[-1]] = value
         return dict(nested)
-    
-    def save(self, data, output_file):
-        os.makedirs(os.path.dirname(output_file), exist_ok=True)
-        with open(output_file, "w") as file:
-            json.dump(data, file, indent=4)
-        print(f"Settings saved to {output_file}")
-
-    def extract_resource_group(self, web_app_id):
-        return web_app_id.split("/")[4]  # Resource group is the 5th element in the id path
-    
-    def list_web_apps(self):
-        # https://learn.microsoft.com/en-us/rest/api/appservice/web-apps/list?view=rest-appservice-2023-12-01
-        url = (
-            f"{self.base_url}/subscriptions/{self.subscription_id}/"
-            f"providers/Microsoft.Web/sites?api-version={self.api_version}"
-        )
-        try:
-            response = requests.get(url, headers=self.headers)
-            if response.status_code == 200:
-                web_apps = response.json().get("value", [])
-                if not web_apps:
-                    print("No web apps found in the subscription.")
-                    return []
-                for app in web_apps:
-                    app['resourceGroup'] = self.extract_resource_group(app['id']).lower()
-                if not self.resource_groups or all(rg not in [app['resourceGroup'] for app in web_apps] for rg in self.resource_groups):
-                    print("No matching resource groups or no resource groups provided. Displaying all web apps.")
-                    return web_apps
-                filtered_web_apps = [
-                    app for app in web_apps if app['resourceGroup'] in self.resource_groups
-                ]
-                return filtered_web_apps
-            else:
-                print(f"Failed to list web apps. Status Code: {response.status_code}")
-                print(f"Response: {response.text}")
-                return []
-        except Exception as e:
-            print(f"Error occurred while listing web apps: {e}")
-            return []
-        
-    def select_web_apps(self):
-        all_web_apps = self.list_web_apps()
-        if not all_web_apps:
-            print("No web apps found.")
-            return None, None
-
-        sorted_web_apps = sorted(all_web_apps, key=lambda x: x['name'])
-        print("\nPlease select a web app:")
-        for i, app in enumerate(sorted_web_apps, start=1):
-            print(f"{i}. {app['name']} (Resource Group: {app['resourceGroup']})")
-        selected_option = int(input("Enter the number of your choice: ")) - 1
-        selected_app = sorted_web_apps[selected_option]
-        selected_resource_group = selected_app['resourceGroup']
-        return selected_app['name'], selected_resource_group
-    
-    def fetch_and_save(self):
-        selected_webapp, selected_resourceGroup = self.select_web_apps()
-        if not selected_webapp or not selected_resourceGroup:
-            print("No web app selected. Aborting.")
-            return
-        # https://learn.microsoft.com/en-us/rest/api/appservice/web-apps/list-application-settings?view=rest-appservice-2023-12-01
-        settings_url = (
-            f"{self.base_url}/subscriptions/{self.subscription_id}/"
-            f"resourceGroups/{selected_resourceGroup}/"
-            f"providers/Microsoft.Web/sites/{selected_webapp}/config/appsettings/list"
-            f"?api-version={self.api_version}"
-        )
-        # https://learn.microsoft.com/en-us/rest/api/appservice/web-apps/list-connection-strings?view=rest-appservice-2023-12-01
-        conn_strings_url = (
-            f"{self.base_url}/subscriptions/{self.subscription_id}/"
-            f"resourceGroups/{selected_resourceGroup}/"
-            f"providers/Microsoft.Web/sites/{selected_webapp}/config/connectionstrings/list"
-            f"?api-version={self.api_version}"
-        )
-
-        appsettings_response = self.request(settings_url)
-        appsettings = self.nest_dict(appsettings_response.get("properties", {}))
-        conn_strings_response = self.request(conn_strings_url)
-        conn_strings = {key: value['value'] for key, value in conn_strings_response.get("properties", {}).items()}
-
-        combined = appsettings
-        combined['ConnectionStrings'] = conn_strings
-
-        self.save(combined, f"results/{selected_webapp}_appsettings.json")

@@ -1,20 +1,4 @@
 {
-    "Environment 1": {
-        "Subscription Name 1": {
-            "resourceGroupName": [
-                "your-resource-group-1",
-                "your-resource-group-2"
-            ]
-        },
-        "Subscription Name 2": {
-            "resourceGroupName": [
-                "your-resource-group-3"
-            ]
-        }
-    },
-    "Environment 2": {
-        "Subscription Name 3": {
-            "resourceGroupName": []
-        }
-    }
+    "app_name": "Azure Managment Tool",
+    "version" : "v0.1.0"
 }
