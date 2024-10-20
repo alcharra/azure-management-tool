@@ -1,8 +1,11 @@
 {
-    "version" : "v0.2.0",
+    "version" : "v0.2.1",
     "app_name": "Azure Managment Tool",
     "display_options": {
         "display_items_in_columns": true,
         "number_of_columns": 2
+    },
+    "role_options" : {
+        "role_assignment_duration" : "PT30M"
     }
 }

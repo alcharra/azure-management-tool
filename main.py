@@ -14,7 +14,7 @@ def main():
     print(f"\nWelcome {user_name} to {config_manager.configurations['app_name']} {config_manager.configurations['version']}")
 
     while True:
-        subscription_manager = SubscriptionManager(token)
+        subscription_manager = SubscriptionManager(token, config_manager)
         selected_subscription = subscription_manager.select_subscription()
 
         print("\nWhat would you like to do?")

@@ -102,6 +102,9 @@ class AppSettingsManager:
             create_role_assignment= self.subscription_manager.create_role_assignment,
             subscription = self.subscription
         )
+        
+        appsettings: Dict[str, Any] = self.nest_dict(appsettings_response.get("properties", {}))
+
         conn_strings_response: Dict[str, Any] = make_api_request(
             url=conn_strings_url,
             method="POST",
@@ -112,7 +115,6 @@ class AppSettingsManager:
             subscription = self.subscription
         )
 
-        appsettings: Dict[str, Any] = self.nest_dict(appsettings_response.get("properties", {}))
         conn_strings: Dict[str, str] = {key: value['value'] for key, value in conn_strings_response.get("properties", {}).items()}
 
         combined: Dict[str, Any] = appsettings

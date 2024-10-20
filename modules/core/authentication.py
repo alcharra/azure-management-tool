@@ -47,7 +47,7 @@ class AuthenticationManager:
     def get_user_name_from_token(self) -> Optional[str]:
         self.decode_token()
         if self.payload:
-            return self.payload.get('name') or self.payload.get('preferred_username')
+            return self.payload.get('name') or self.payload.get('upn')
         else:
             print("Could not extract user information from token.")
             return None

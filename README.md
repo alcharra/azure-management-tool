@@ -31,11 +31,14 @@ The tool expects a `config.json` file structured like this:
 
 ```json
 {
-    "version": "vX.X.X",
-    "app_name": "Azure Management Tool",
-    "display_options": {
-        "display_items_in_columns": true,
-        "number_of_columns": 2
+   "version": "vX.X.X",
+   "app_name": "Azure Management Tool",
+   "display_options": {
+      "display_items_in_columns": true,
+      "number_of_columns": 2
+    },
+   "role_options" : {
+      "role_assignment_duration" : "PT30M"
     }
 }
 ```
@@ -47,6 +50,8 @@ The tool expects a `config.json` file structured like this:
 - **display_options**:
   - **display_items_in_columns**: A boolean value (`true` or `false`) that controls whether to display items (like web apps or SQL servers) in multiple columns for better readability.
   - **number_of_columns**: Specifies how many columns to display when `display_items_in_columns` is set to `true`.
+- **role_options**:
+  - **role_assignment_duration**: Defines the duration for role assignments in ISO 8601 duration format (e.g., `PT30M` for 30 minutes, `PT1H` for 1 hour, `P1D` for 1 day). This allows the user to set the desired time duration for role assignments when they are automatically created.
 
 ## Usage
 
@@ -77,7 +82,7 @@ The tool expects a `config.json` file structured like this:
 
 5. **Role Management**:
    
-   The tool automatically checks whether your user has the necessary role assignments for the selected subscription. If authorisation fails, it will attempt to create a role assignment and retry the operation.
+   The tool automatically checks whether your user has the necessary role assignments for the selected subscription. If authorisation fails, it will attempt to create a role assignment with a default duration of 30 minutes and retry the operation.
 
 ## How to Use for Firewall
 

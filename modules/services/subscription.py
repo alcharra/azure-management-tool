@@ -13,7 +13,8 @@ class SubscriptionManager:
 
     # INITIALISE SUBSCRIPTION MANAGER
     # ///////////////////////////////////////////////////////////////
-    def __init__(self, token: str) -> None:
+    def __init__(self, token: str, config_manager: Any) -> None:
+        self.config_manager = config_manager
         self.base_url: str = "https://management.azure.com"
         self.api_version: str = "2020-10-01"
         self.headers: Dict[str, str] = {
@@ -59,12 +60,12 @@ class SubscriptionManager:
                 "roleDefinitionId": role_definition_id,
                 "principalId": principal_id,
                 "scope": f"/subscriptions/{subscription_id}",
-                "Justification": "Python tool: Requested access to role.",
+                "Justification": f"Python tool: Requested access to role - {self.config_manager.configurations['app_name']}.",
                 "scheduleInfo": {
                     "startDateTime": None,
                     "expiration": {
                         "type": "AfterDuration",
-                        "duration": "PT30M"
+                        "duration": f"{self.config_manager.configurations['role_options']['role_assignment_duration']}"
                     }
                 },
                 "requestType": "SelfActivate",
