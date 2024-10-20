@@ -1,5 +1,5 @@
 {
-    "version" : "v0.2.1",
+    "version" : "v0.2.2",
     "app_name": "Azure Managment Tool",
     "display_options": {
         "display_items_in_columns": true,

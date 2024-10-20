@@ -89,7 +89,6 @@ class SQLFirewallRuleManager:
             item_key = 'name',
             item_type=  'SQL Server',
             select_message = "\nPlease select a SQL server from the list:",
-            extract_func = lambda server: extract_segment(server['id'], 4),
             num_columns = self.config_manager.configurations['display_options']['number_of_columns'],
             display_columns = self.config_manager.configurations['display_options']['display_items_in_columns']
         )

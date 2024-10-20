@@ -72,7 +72,6 @@ def search_and_select_from_list(
     item_key: str,
     item_type: str,
     select_message: str,
-    extract_func: Optional[callable] = None,
     num_columns: int = 2,
     display_columns: bool = True
 ) -> Optional[Tuple[str, str]]:
@@ -99,7 +98,7 @@ def search_and_select_from_list(
                 selected_index = int(user_input) - 1
                 if 0 <= selected_index < len(matching_items):
                     selected_item = matching_items[selected_index]
-                    resource_group = extract_func(selected_item) if extract_func else None
+                    resource_group = extract_segment(selected_item['id'], 4)
                     return selected_item[item_key], resource_group
                 else:
                     print("Invalid selection. Please enter a valid number.")
@@ -108,7 +107,7 @@ def search_and_select_from_list(
 
         if len(matching_items) == 1:
             selected_item = matching_items[0]
-            resource_group = extract_func(selected_item) if extract_func else None
+            resource_group = extract_segment(selected_item['id'], 4)
             return selected_item[item_key], resource_group
         else:
             print(f"No matching {item_type.lower()}s found.")
@@ -124,14 +123,13 @@ def search_and_select_from_list(
             selected_index = int(refine_choice) - 1
             if 0 <= selected_index < len(items):
                 selected_item = items[selected_index]
-                resource_group = extract_func(selected_item) if extract_func else None
+                resource_group = extract_segment(selected_item['id'], 4)
                 return selected_item[item_key], resource_group
             else:
                 print("Invalid selection. Please enter a valid number.")
         else:
             matching_items = [item for item in items if refine_choice.lower() in item[item_key].lower()]
             return get_user_choice(matching_items)
-
 
 # DISPLAY ITEMS IN COLUMNS (LONGEST ON RIGHT)
 # Prints a list of items side by side in columns, with the longest items on the right

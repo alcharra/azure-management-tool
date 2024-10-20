@@ -71,7 +71,6 @@ class AppSettingsManager:
             item_key = 'name',
             item_type = 'Web App',
             select_message = "\nPlease select a web app from the list:",
-            extract_func = lambda app: extract_segment(app['id'], 4),
             num_columns = self.config_manager.configurations['display_options']['number_of_columns'],
             display_columns = self.config_manager.configurations['display_options']['display_items_in_columns']
         )

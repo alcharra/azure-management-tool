@@ -110,6 +110,8 @@ Please select a SQL server:
 2. sql-server-2  
 Enter the number of your choice: 1  
 
+Enter a new firewall rule name or press Enter to use 'MyFirewallRule':
+
 Adding IP to firewall rule: MyFirewallRule  
 IP Range: 192.168.1.0 - 192.168.1.255  
 Firewall rule 'MyFirewallRule' created/updated successfully.
@@ -125,12 +127,12 @@ Please select a SQL server:
 2. sql-prod  
 Enter the number of your choice: 1  
 
-Enter the custom name: JohnDoe  
-Enter the IP address: 10.0.0.25  
+Enter a new firewall rule name or press Enter to use 'MyFirewallRule': JohnDoe
+Enter a custom IPv4 address or press Enter to use your current public IP (192.168.1.100): 10.0.0.25
 
-Adding IP to firewall rule: JohnDoeFirewallRule  
+Adding IP to firewall rule: JohnDoe  
 IP Range: 10.0.0.0 - 10.0.0.255  
-Firewall rule 'JohnDoeFirewallRule' created/updated successfully.
+Firewall rule 'JohnDoe' created/updated successfully.
 ```
 
 ## How to Use for AppSettings
